@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Registrar una falta</title>
+<style>
+  :root {
+    --bg: #f4f6f8; --card: #fff; --fg: #17202a; --muted: #56616c; --line: #cdd5dc;
+    --accent: #1d6a85; --accent-fg: #fff; --error: #b3261e; --ok: #1e7b3a;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #10161c; --card: #18212a; --fg: #e3e9ee; --muted: #9aa7b3; --line: #33414e;
+      --accent: #5bb4d3; --accent-fg: #0c1419; --error: #f2877e; --ok: #74cf8f; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 18px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 560px; margin: 0 auto; padding: 16px; }
+  h1 { font-size: 24px; margin: 4px 0 16px; }
+  fieldset, .campo { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 12px 16px; margin: 0 0 14px; min-width: 0; }
+  legend, .campo > label { float: left; width: 100%; padding: 0; margin-bottom: 6px; font-weight: 600; }
+  legend + *, .campo > label + * { clear: both; }
+  .opcion { display: flex; align-items: center; gap: 12px; min-height: 44px; }
+  .opcion input { width: 22px; height: 22px; margin: 0; accent-color: var(--accent); }
+  .todos { font-weight: 600; border-bottom: 1px solid var(--line); }
+  .ayuda { color: var(--muted); font-size: 15px; margin: 4px 0 0; }
+  textarea { display: block; width: 100%; min-height: 96px; font: inherit; color: inherit; background: transparent; padding: 10px; border: 1px solid var(--line); border-radius: 8px; }
+  .fecha { display: flex; flex-wrap: wrap; gap: 8px; }
+  .fecha button, .fecha input { font: inherit; color: inherit; background: transparent; min-height: 44px; padding: 6px 14px; border: 1px solid var(--line); border-radius: 8px; }
+  .fecha button[aria-pressed="true"] { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+  .principal { width: 100%; min-height: 52px; font: inherit; font-weight: 600; color: var(--accent-fg); background: var(--accent); border: 0; border-radius: 10px; }
+  .principal:disabled { opacity: .6; }
+  #mensaje { min-height: 1.45em; margin: 0 0 12px; }
+  .error { color: var(--error); }
+  .ok { color: var(--ok); font-weight: 600; font-size: 22px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Registrar una falta</h1>
+  <p id="cargando">Cargando…</p>
+
+  <form id="falta" hidden>
+    <fieldset>
+      <legend>Tipo de falta</legend>
+      <div id="tipos"></div>
+    </fieldset>
+    <fieldset>
+      <legend>Gravedad</legend>
+      <div id="gravedades"></div>
+      <p class="ayuda">Crítica: pierde el bono completo del mes.</p>
+    </fieldset>
+    <fieldset>
+      <legend>¿A quién afecta?</legend>
+      <div>
+        <label class="opcion todos"><input type="checkbox" id="todos"> Todos</label>
+        <div id="personas"></div>
+      </div>
+    </fieldset>
+    <div class="campo">
+      <label for="detalle">¿Qué pasó?</label>
+      <textarea id="detalle" maxlength="2000" required></textarea>
+    </div>
+    <fieldset>
+      <legend>Fecha de la falta</legend>
+      <div class="fecha">
+        <button type="button" data-dia="hoy">Hoy</button>
+        <button type="button" data-dia="ayer">Ayer</button>
+        <input type="date" id="fecha" aria-label="Otra fecha" required>
+      </div>
+    </fieldset>
+    <p id="mensaje" role="status" aria-live="polite"></p>
+    <button class="principal" id="enviar" type="submit">Registrar falta</button>
+  </form>
+
+  <div id="listo" hidden>
+    <p class="ok" role="status">Falta registrada.</p>
+    <button class="principal" id="otra" type="button">Registrar otra</button>
+  </div>
+</main>
+<script>
+  const $ = (s) => document.querySelector(s);
+  const casillas = () => [...document.querySelectorAll('input[name=persona]')];
+  let datos, id, inicio;
+
+  function opcion(tipo, nombre, valor) {
+    const label = document.createElement('label');
+    label.className = 'opcion';
+    const input = document.createElement('input');
+    Object.assign(input, { type: tipo, name: nombre, value: valor, required: tipo === 'radio' });
+    label.append(input, ' ' + valor); // texto, nunca HTML: los nombres vienen de la hoja
+    return label;
+  }
+
+  function mensaje(texto, error) {
+    $('#mensaje').textContent = texto;
+    $('#mensaje').className = error ? 'error' : '';
+  }
+
+  function marcarDia() {
+    document.querySelectorAll('[data-dia]').forEach((b) => b.setAttribute('aria-pressed', $('#fecha').value === datos[b.dataset.dia]));
+  }
+
+  // Cada falta nueva lleva su propio id; un reintento usa el mismo, así el servidor no la guarda dos veces.
+  function nueva() {
+    $('#falta').reset();
+    id = crypto.randomUUID();
+    inicio = null;
+    marcarDia();
+    mensaje('');
+    $('#listo').hidden = true;
+    $('#falta').hidden = false;
+  }
+
+  function pintar(d) {
+    datos = d;
+    $('#tipos').replaceChildren(...d.tipos.map((t) => opcion('radio', 'tipo', t)));
+    $('#gravedades').replaceChildren(...d.gravedades.map((g) => opcion('radio', 'gravedad', g)));
+    $('#personas').replaceChildren(...d.personas.map((p) => opcion('checkbox', 'persona', p)));
+    $('#fecha').max = d.hoy;
+    $('#cargando').hidden = true;
+    nueva();
+  }
+
+  $('#todos').addEventListener('change', (e) => casillas().forEach((c) => { c.checked = e.target.checked; }));
+  $('#personas').addEventListener('change', () => { $('#todos').checked = casillas().every((c) => c.checked); });
+
+  document.querySelectorAll('[data-dia]').forEach((b) => b.addEventListener('click', () => {
+    $('#fecha').value = datos[b.dataset.dia];
+    marcarDia();
+  }));
+  $('#fecha').addEventListener('input', marcarDia);
+
+  // Los segundos se cuentan desde que Marcos toca algo, no desde que abre la página.
+  ['input', 'click'].forEach((ev) => $('#falta').addEventListener(ev, () => { inicio = inicio || Date.now(); }));
+
+  $('#falta').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const f = new FormData(e.target);
+    const entrada = {
+      id,
+      tipo: f.get('tipo'),
+      gravedad: f.get('gravedad'),
+      afecta: f.getAll('persona'),
+      detalle: $('#detalle').value,
+      fecha: $('#fecha').value,
+      segundos: (Date.now() - inicio) / 1000,
+    };
+    $('#enviar').disabled = true;
+    mensaje('Guardando…');
+    google.script.run
+      .withSuccessHandler((r) => {
+        $('#enviar').disabled = false;
+        if (r.error) return mensaje(r.error, true);
+        $('#falta').hidden = true;
+        $('#listo').hidden = false;
+      })
+      .withFailureHandler(() => {
+        $('#enviar').disabled = false;
+        mensaje('No hay conexión. Intenta de nuevo.', true);
+      })
+      .guardarFalta(entrada);
+  });
+
+  $('#otra').addEventListener('click', nueva);
+
+  google.script.run
+    .withSuccessHandler(pintar)
+    .withFailureHandler(() => { $('#cargando').textContent = 'No se pudo cargar. Revisa la conexión y recarga la página.'; })
+    .datosDePagina();
+</script>
+</body>
+</html>

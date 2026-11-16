@@ -1,0 +1,11 @@
+{
+  "name": "bono-faltas",
+  "private": true,
+  "scripts": {
+    "test": "node --test",
+    "e2e": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.66.0-alpha-2026-11-09"
+  }
+}
