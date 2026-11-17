@@ -1,6 +1,6 @@
 # Bono por desempeño
 
-Registro de faltas de montacarguistas, ayudantes y supervisores de Induvenpa, y cálculo de cuánto bono cobra cada uno en el período.
+Registro de faltas de supervisores, montacarguistas, ayudantes y cocineras de Induvenpa, y cálculo de cuánto bono cobra cada uno en el período.
 
 ## Language
 
