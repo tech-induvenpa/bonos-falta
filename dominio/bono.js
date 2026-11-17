@@ -19,7 +19,7 @@ function calcularResumen(personas, pesos, faltas, desde, hasta) {
       nombre,
       bono,
       descuento,
-      cobra: Math.round(bono * (1 - descuento) * 100) / 100,
+      cobra: bono === null ? null : Math.round(bono * (1 - descuento) * 100) / 100, // sin monto todavía: solo el descuento
       faltas: suyas.map((f) => ({ fecha: f.fecha || f.registro, gravedad: f.gravedad, detalle: f.detalle })),
     };
   });

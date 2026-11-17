@@ -10,7 +10,8 @@ async function abrir(page, { fallarPrimerEnvio = false } = {}) {
     window.enviadas = [];
     let fallos = fallar ? 1 : 0;
     const datos = {
-      personas: ['Pedro', 'Luis', 'Ana'], gravedades: ['Leve', 'Media', 'Grave', 'Crítica'],
+      personas: [{ nombre: 'Pedro', rol: 'Montacarguistas' }, { nombre: 'Luis', rol: 'Montacarguistas' }, { nombre: 'Ana', rol: 'Ayudantes' }],
+      gravedades: [{ gravedad: 'Leve', texto: 'Leve · 5 %' }, { gravedad: 'Media', texto: 'Media · 50 %' }, { gravedad: 'Grave', texto: 'Grave · 100 %' }],
       tipos: ['De conducta'], hoy: '2026-11-16', ayer: '2026-11-15',
     };
     const runner = () => {
@@ -34,10 +35,13 @@ async function abrir(page, { fallarPrimerEnvio = false } = {}) {
   await page.goto(PAGINA);
 }
 
+const verNombres = (page, rol) => page.locator('.grupo', { hasText: rol }).getByRole('button').click();
+
 async function llenar(page) {
   await page.getByLabel('De conducta').check();
   await page.getByLabel('Media').check();
   await page.getByLabel('Todos').check();
+  await verNombres(page, 'Ayudantes');
   await page.getByLabel('Ana').uncheck();
   await page.getByLabel('¿Qué pasó?').fill('Llegó tarde');
   await page.getByRole('button', { name: 'Hoy' }).click();
@@ -49,6 +53,7 @@ test('«Todos» marca a todos, y desmarcar a uno desmarca «Todos»', async ({ p
   await abrir(page);
   await page.getByLabel('Todos').check();
   for (const nombre of ['Pedro', 'Luis', 'Ana']) await expect(page.getByLabel(nombre)).toBeChecked();
+  await verNombres(page, 'Montacarguistas');
   await page.getByLabel('Luis').uncheck();
   await expect(page.getByLabel('Todos')).not.toBeChecked();
   await expect(page.getByLabel('Pedro')).toBeChecked();
@@ -56,10 +61,54 @@ test('«Todos» marca a todos, y desmarcar a uno desmarca «Todos»', async ({ p
   await expect(page.getByLabel('Todos')).toBeChecked();
 });
 
+test('un grupo se marca de un golpe, y desmarcar a uno desmarca el grupo', async ({ page }) => {
+  await abrir(page);
+  await page.getByLabel('Montacarguistas').check();
+  await expect(page.getByLabel('Pedro')).toBeChecked();
+  await expect(page.getByLabel('Luis')).toBeChecked();
+  await expect(page.getByLabel('Ana')).not.toBeChecked();
+  await expect(page.getByLabel('Todos')).not.toBeChecked();
+  await verNombres(page, 'Ayudantes');
+  await page.getByLabel('Ana').check();
+  await expect(page.getByLabel('Todos')).toBeChecked();
+  await verNombres(page, 'Montacarguistas');
+  await page.getByLabel('Luis').uncheck();
+  await expect(page.getByLabel('Montacarguistas')).not.toBeChecked();
+  await expect(page.getByLabel('Todos')).not.toBeChecked();
+});
+
+test('los nombres de cada grupo están plegados hasta que se piden', async ({ page }) => {
+  await abrir(page);
+  await expect(page.getByLabel('Pedro')).toBeHidden();
+  const boton = page.locator('.grupo', { hasText: 'Montacarguistas' }).getByRole('button');
+  await expect(boton).toHaveText(/0 de 2/);
+  await boton.click();
+  await expect(page.getByLabel('Pedro')).toBeVisible();
+  await page.getByLabel('Pedro').check();
+  await expect(boton).toHaveText(/1 de 2/);
+});
+
+test('dice a cuántos afecta antes de enviar', async ({ page }) => {
+  await abrir(page);
+  await expect(page.getByText('Todavía no marcaste a nadie')).toBeVisible();
+  await verNombres(page, 'Montacarguistas');
+  await page.getByLabel('Pedro').check();
+  await expect(page.getByText('Afecta a 1 persona')).toBeVisible();
+  await page.getByLabel('Todos').check();
+  await expect(page.getByText('Afecta a todos (3)')).toBeVisible();
+});
+
+test('cada gravedad muestra cuánto quita, según la hoja', async ({ page }) => {
+  await abrir(page);
+  await expect(page.getByLabel('Grave · 100 %')).toBeVisible();
+  await expect(page.getByText('Crítica')).toHaveCount(0);
+});
+
 test('sin fecha no se envía; «Ayer» la llena', async ({ page }) => {
   await abrir(page);
   await page.getByLabel('De conducta').check();
   await page.getByLabel('Leve').check();
+  await verNombres(page, 'Montacarguistas');
   await page.getByLabel('Pedro').check();
   await page.getByLabel('¿Qué pasó?').fill('Pelea');
   await page.getByRole('button', { name: 'Registrar falta' }).click();

@@ -20,10 +20,10 @@ _Avoid_: castigo, sanción, multa
 Categoría de la **Falta**; por ahora solo «De conducta». El detalle va en texto libre: no hay catálogo de faltas.
 
 **Gravedad**:
-Leve, media, grave o crítica; cada una tiene un **Peso**.
+Leve, media o grave; cada una tiene un **Peso**. Hasta el 17-nov-2026 existió «crítica» (100 %); la grave la reemplazó.
 
 **Peso**:
-Porcentaje del **Bono** completo que quita una **Falta** de esa **Gravedad** (leve 5 %, media 15 %, grave un tercio, crítica 100 %); se ajusta en la pestaña Pesos.
+Porcentaje del **Bono** completo que quita una **Falta** de esa **Gravedad** (desde el 17-nov-2026: leve 5 %, media 50 %, grave 100 %); se ajusta en la pestaña Pesos.
 _Avoid_: castigo, multa
 
 **Descuento**:

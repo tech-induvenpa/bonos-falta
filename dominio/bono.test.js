@@ -147,3 +147,9 @@ test('con un corte a mitad de mes, el siguiente corte es el mismo día del mes s
   assert.deepEqual(siguientePeriodo('2026-11-25'), { desde: '2026-11-26', hasta: '2026-12-25' });
   assert.deepEqual(siguientePeriodo('2027-01-30'), { desde: '2027-01-31', hasta: '2027-02-28' });
 });
+
+test('sin monto de bono, el descuento se calcula igual y lo que cobra queda vacío', () => {
+  const [ana] = calcularResumen([{ nombre: 'Ana', bono: null }], PESOS, [falta(['Ana'], 'Leve')], DESDE, HASTA);
+  assert.equal(ana.descuento, 0.05);
+  assert.equal(ana.cobra, null);
+});
